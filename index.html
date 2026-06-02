@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>E&T Electric — Weekly KPI Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2230;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--c1:#3b82f6;--c2:#22c55e;--c3:#a855f7;--c4:#f97316;--positive:#3fb950;--negative:#f85149}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;font-size:14px;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.logo-box{background:var(--c1);color:#fff;font-weight:800;font-size:18px;padding:6px 12px;border-radius:6px;letter-spacing:1px}
+.topbar-logo{display:flex;align-items:center;gap:12px}
+.topbar-title{font-size:18px;font-weight:700}
+.topbar-meta{font-size:12px;color:var(--muted)}
+.control-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;background:var(--surface);color:var(--text)}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:var(--c1);border-color:var(--c1);color:#fff}
+.btn-primary:hover{background:#2563eb;border-color:#2563eb;color:#fff}
+.btn-danger{background:transparent;border-color:var(--negative);color:var(--negative)}
+.btn-danger:hover{background:var(--negative);color:#fff}
+#file-input{display:none}
+.timeline-label{font-size:12px;color:var(--muted);white-space:nowrap}
+select.week-select{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer}
+select.week-select:focus{outline:none;border-color:var(--accent)}
+.main{padding:20px 24px;max-width:1600px;margin:0 auto}
+.empty-state{text-align:center;padding:80px 20px;color:var(--muted)}
+.empty-state h2{font-size:20px;color:var(--text);margin-bottom:8px}
+.empty-state p{font-size:14px;line-height:1.6;max-width:440px;margin:0 auto 20px}
+.empty-icon{font-size:64px;margin-bottom:16px;opacity:.4}
+.sections-nav{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.sec-card{border-radius:10px;padding:18px 20px;cursor:pointer;border:2px solid transparent;transition:all .2s}
+.sec-card:hover{transform:translateY(-2px)}
+.sec-card.active{border-color:rgba(255,255,255,.3)}
+.sec-icon{font-size:28px;margin-bottom:8px}
+.sec-name{font-size:13px;font-weight:600;opacity:.85;letter-spacing:.5px;text-transform:uppercase}
+.sec-val{font-size:26px;font-weight:800;margin:4px 0}
+.sec-sub{font-size:12px;opacity:.7}
+.sec-office{background:linear-gradient(135deg,#1e3a5f,#2e4e87)}
+.sec-marketing{background:linear-gradient(135deg,#14422b,#1d6a3e)}
+.sec-hr{background:linear-gradient(135deg,#3b1a5a,#7b2d8b)}
+.sec-sunshine{background:linear-gradient(135deg,#6b2a05,#b8420a)}
+.section-content{display:none}
+.section-content.visible{display:block}
+.kpi-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.kpi-pill{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;min-width:160px;flex:1}
+.kp-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.kp-value{font-size:22px;font-weight:700;color:var(--text)}
+.kp-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}.sections-nav{grid-template-columns:1fr 1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px}
+.card-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+.card-title span{color:var(--text)}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{background:var(--surface2);color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.data-table td{padding:7px 10px;border-bottom:1px solid var(--border)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table .total-row td{font-weight:700;background:var(--surface2)}
+.data-table .num{text-align:right}
+.zero{color:var(--muted)}
+.bar-wrap{margin-bottom:8px}
+.bar-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+.bar-track{background:var(--surface2);border-radius:4px;height:8px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s}
+.chart-wrap{position:relative;height:200px}
+.notes-list{list-style:none}
+.notes-list li{padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+.notes-list li:last-child{border-bottom:none}
+.notes-list li::before{content:"•";color:var(--accent);margin-right:8px}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-green{background:#1a3a20;color:var(--positive)}
+.badge-red{background:#3a1a1a;color:var(--negative)}
+.badge-blue{background:#1a2a3a;color:var(--accent)}
+.badge-muted{background:var(--surface2);color:var(--muted)}
+.toast{position:fixed;bottom:24px;right:24px;background:#1a3a20;border:1px solid var(--positive);color:var(--positive);padding:10px 18px;border-radius:8px;font-size:13px;z-index:999;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-box">E&amp;T</div>
+    <div>
+      <div class="topbar-title">E&amp;T Electric &mdash; Weekly KPI Dashboard</div>
+      <div class="topbar-meta" id="topbar-meta">No file loaded</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <span id="file-count-badge" class="badge badge-muted" style="display:none"></span>
+    <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">&#8679; Upload Weekly File</button>
+    <button class="btn btn-danger" id="clear-btn" onclick="clearHistory()" style="display:none">&#128465; Clear History</button>
+  </div>
+</div>
+<input type="file" id="file-input" accept=".xlsx,.xls" multiple/>
+
+<div class="control-bar" id="control-bar" style="display:none">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="timeline-label">&#128197; Week:</span>
+    <select class="week-select" id="week-select" onchange="loadWeek(this.value)"></select>
+  </div>
+  <button class="btn" onclick="navigateWeek(-1)">&#9664; Previous</button>
+  <button class="btn" onclick="navigateWeek(1)">Next &#9654;</button>
+  <span class="timeline-label" id="week-position" style="color:var(--muted)"></span>
+</div>
+
+<div class="main" id="main-content">
+  <div class="empty-state" id="empty-state">
+    <div class="empty-icon">&#128202;</div>
+    <h2>No KPI data loaded</h2>
+    <p>Upload your weekly Excel file (<code>KPI_Weekly_Template.xlsx</code>) to see the dashboard. You can upload multiple weeks &mdash; the dashboard stores history so you can navigate between them.</p>
+    <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">&#8679; Upload First File</button>
+  </div>
+
+  <div id="dashboard" style="display:none">
+    <div class="sections-nav">
+      <div class="sec-card sec-office active" id="nav-office" onclick="showSection('office')">
+        <div class="sec-icon">&#127970;</div>
+        <div class="sec-name">Office</div>
+        <div class="sec-val" id="nav-office-val">&mdash;</div>
+        <div class="sec-sub">Total Labor Hours</div>
+      </div>
+      <div class="sec-card sec-marketing" id="nav-marketing" onclick="showSection('marketing')">
+        <div class="sec-icon">&#128227;</div>
+        <div class="sec-name">Marketing</div>
+        <div class="sec-val" id="nav-marketing-val">&mdash;</div>
+        <div class="sec-sub">Total Platform Views</div>
+      </div>
+      <div class="sec-card sec-hr" id="nav-hr" onclick="showSection('hr')">
+        <div class="sec-icon">&#128101;</div>
+        <div class="sec-name">HR</div>
+        <div class="sec-val" id="nav-hr-val">&mdash;</div>
+        <div class="sec-sub">Open Positions</div>
+      </div>
+      <div class="sec-card sec-sunshine" id="nav-sunshine" onclick="showSection('sunshine')">
+        <div class="sec-icon">&#9728;&#65039;</div>
+        <div class="sec-name">Sunshine Carwash</div>
+        <div class="sec-val" id="nav-sunshine-val">&mdash;</div>
+        <div class="sec-sub">Total Weekly Income</div>
+      </div>
+    </div>
+
+    <!-- OFFICE -->
+    <div class="section-content visible" id="sec-office">
+      <div class="kpi-row">
+        <div class="kpi-pill"><div class="kp-label">Bills Entered</div><div class="kp-value" id="o-bills">&mdash;</div><div class="kp-sub">This week</div></div>
+        <div class="kpi-pill"><div class="kp-label">Checks Issued</div><div class="kp-value" id="o-checks">&mdash;</div><div class="kp-sub">This week</div></div>
+        <div class="kpi-pill"><div class="kp-label">IT Issues Resolved</div><div class="kp-value" id="o-it">&mdash;</div><div class="kp-sub">This week</div></div>
+        <div class="kpi-pill"><div class="kp-label">Payments Received</div><div class="kp-value" id="o-payments">&mdash;</div><div class="kp-sub">This week</div></div>
+        <div class="kpi-pill"><div class="kp-label">Total Labor Hours</div><div class="kp-value" id="o-total-hrs">&mdash;</div><div class="kp-sub">Reg + OT + Contractor</div></div>
+      </div>
+      <div class="grid-3">
+        <div class="card"><div class="card-title">Jobs Opened <span>by State</span></div><div class="chart-wrap"><canvas id="chart-jobs"></canvas></div></div>
+        <div class="card"><div class="card-title">Invoices <span>by State</span></div><div class="chart-wrap"><canvas id="chart-inv"></canvas></div></div>
+        <div class="card"><div class="card-title">Purchase Orders <span>by State</span></div><div class="chart-wrap"><canvas id="chart-pos"></canvas></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Hours <span>Breakdown</span></div><div id="hours-bars"></div></div>
+        <div class="card">
+          <div class="card-title">Hours &amp; Cost <span>by State/Contractor</span></div>
+          <div style="overflow-x:auto"><table class="data-table" id="tbl-hours-state"><thead><tr><th>State/Contractor</th><th class="num">Reg Hrs</th><th class="num">OT Hrs</th><th class="num">Cost</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-title">Vehicle Maintenance <span>This Week</span></div><table class="data-table" id="tbl-vehicles"><thead><tr><th>Vehicle #</th><th>Date</th><th>Description</th></tr></thead><tbody></tbody></table></div>
+    </div>
+
+    <!-- MARKETING -->
+    <div class="section-content" id="sec-marketing">
+      <div class="kpi-row">
+        <div class="kpi-pill"><div class="kp-label">Total Posts</div><div class="kp-value" id="m-posts">&mdash;</div><div class="kp-sub">This week</div></div>
+        <div class="kpi-pill"><div class="kp-label">Total Views</div><div class="kp-value" id="m-views">&mdash;</div><div class="kp-sub">All platforms</div></div>
+        <div class="kpi-pill"><div class="kp-label">Instagram Views</div><div class="kp-value" id="m-ig">&mdash;</div></div>
+        <div class="kpi-pill"><div class="kp-label">Facebook Views</div><div class="kp-value" id="m-fb">&mdash;</div></div>
+        <div class="kpi-pill"><div class="kp-label">TikTok Views</div><div class="kp-value" id="m-tt">&mdash;</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Posts <span>by Type</span></div><div class="chart-wrap"><canvas id="chart-posts"></canvas></div></div>
+        <div class="card"><div class="card-title">Platform <span>Views</span></div><div class="chart-wrap"><canvas id="chart-views"></canvas></div></div>
+      </div>
+      <div class="card"><div class="card-title">Posts Detail</div><table class="data-table" id="tbl-posts"><thead><tr><th>Platform / Post Type</th><th class="num"># Posts</th></tr></thead><tbody></tbody></table></div>
+      <div class="card" id="mkt-notes-card" style="margin-top:16px;display:none"><div class="card-title">Marketing Notes</div><ul class="notes-list" id="mkt-notes-list"></ul></div>
+    </div>
+
+    <!-- HR -->
+    <div class="section-content" id="sec-hr">
+      <div class="kpi-row">
+        <div class="kpi-pill"><div class="kp-label">E&amp;T New Hires</div><div class="kp-value" id="hr-et-hire">&mdash;</div></div>
+        <div class="kpi-pill"><div class="kp-label">E&amp;T Terminations</div><div class="kp-value" id="hr-et-term">&mdash;</div></div>
+        <div class="kpi-pill"><div class="kp-label">E&amp;T Resignations</div><div class="kp-value" id="hr-et-res">&mdash;</div></div>
+        <div class="kpi-pill"><div class="kp-label">Open Positions</div><div class="kp-value" id="hr-open">&mdash;</div></div>
+        <div class="kpi-pill"><div class="kp-label">Sunshine New Hires</div><div class="kp-value" id="hr-sun-hire">&mdash;</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">E&amp;T &mdash; Headcount Events</div><table class="data-table" id="tbl-et-events"><thead><tr><th>Event Type</th><th>Employee</th><th class="num">Count</th><th>Notes</th></tr></thead><tbody></tbody></table></div>
+        <div class="card"><div class="card-title">Open Positions &mdash; E&amp;T</div><table class="data-table" id="tbl-positions"><thead><tr><th>Position</th><th>State</th><th class="num">Applicants</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Sunshine &mdash; Headcount Events</div><table class="data-table" id="tbl-sun-events"><thead><tr><th>Event Type</th><th>Employee</th><th class="num">Count</th><th>Notes</th></tr></thead><tbody></tbody></table></div>
+        <div class="card" id="hr-notes-card" style="display:none"><div class="card-title">HR Notes</div><ul class="notes-list" id="hr-notes-list"></ul></div>
+      </div>
+    </div>
+
+    <!-- SUNSHINE -->
+    <div class="section-content" id="sec-sunshine">
+      <div class="kpi-row">
+        <div class="kpi-pill"><div class="kp-label">Total Income</div><div class="kp-value" id="s-income">&mdash;</div><div class="kp-sub">After membership discount</div></div>
+        <div class="kpi-pill"><div class="kp-label">Total Cars</div><div class="kp-value" id="s-cars">&mdash;</div></div>
+        <div class="kpi-pill"><div class="kp-label">Active Memberships</div><div class="kp-value" id="s-members">&mdash;</div></div>
+        <div class="kpi-pill"><div class="kp-label">Avg Revenue / Car</div><div class="kp-value" id="s-avg">&mdash;</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Profit Centers <span>Breakdown</span></div><div class="chart-wrap"><canvas id="chart-sunshine"></canvas></div></div>
+        <div class="card"><div class="card-title">Profit Centers <span>Detail</span></div><table class="data-table" id="tbl-sunshine"><thead><tr><th>Profit Center</th><th class="num">Qty</th><th class="num">Amount</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="card" id="sun-notes-card" style="display:none"><div class="card-title">Sunshine Notes</div><ul class="notes-list" id="sun-notes-list"></ul></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY='et_kpi_weeks';
+let weeksData={};
+let currentWeekKey=null;
+const chartInstances={};
+
+try{weeksData=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');}catch(e){weeksData={};}
+if(Object.keys(weeksData).length){
+  currentWeekKey=Object.keys(weeksData).sort().pop();
+  renderDashboard(weeksData[currentWeekKey]);
+  rebuildTimeline();
+}
+
+document.getElementById('file-input').addEventListener('change',e=>{
+  Array.from(e.target.files).forEach(f=>readExcelFile(f));
+  e.target.value='';
+});
+
+function readExcelFile(file){
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array',cellDates:true});
+      const parsed=parseWorkbook(wb);
+      const key=deriveKey(parsed.meta,file.name);
+      weeksData[key]=parsed;
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(weeksData));
+      currentWeekKey=key;
+      renderDashboard(parsed);
+      rebuildTimeline();
+      showToast('Loaded: '+key);
+    }catch(err){showToast('Error reading file: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function deriveKey(meta,filename){
+  if(meta.weekEnd){const d=new Date(meta.weekEnd);if(!isNaN(d))return d.toISOString().slice(0,10);}
+  const m=filename.match(/(\d{4}-\d{2}-\d{2})/);
+  if(m)return m[1];
+  return new Date().toISOString().slice(0,10);
+}
+
+function parseWorkbook(wb){
+  const sheets={};
+  wb.SheetNames.forEach(n=>{sheets[n.toLowerCase().replace(/\s+/g,'_')]=wb.Sheets[n];});
+  function rows(k){const s=sheets[k];if(!s)return[];return XLSX.utils.sheet_to_json(s,{header:1,defval:''});}
+  const num=v=>{const n=parseFloat(String(v||0).replace(/[$,()]/g,''));return isNaN(n)?0:n;};
+
+  // META
+  const meta={weekStart:'',weekEnd:'',preparedBy:'',notes:''};
+  rows('meta').forEach(r=>{
+    const k=String(r[0]||'').toLowerCase();
+    if(k.includes('start'))meta.weekStart=r[1];
+    else if(k.includes('end'))meta.weekEnd=r[1];
+    else if(k.includes('prepared'))meta.preparedBy=r[1];
+    else if(k.includes('notes')||k.includes('comment'))meta.notes=r[1];
+  });
+
+  // OFFICE
+  const off={bills:0,checks:0,it:0,payments:0,regHrs:0,otHrs:0,conHrs:0,jobs:{},invoices:{},pos:{},hoursByState:[],vehicles:[]};
+  let sec='';
+  rows('office').forEach(r=>{
+    const c0=String(r[0]||'').trim();
+    const lc=c0.toLowerCase();
+    if(lc.includes('jobs opened')){sec='jobs';return;}
+    if(lc.includes('invoices by')){sec='inv';return;}
+    if(lc.includes('hours') && lc.includes('e&t')){sec='hrs';return;}
+    if(lc.includes('hours') && (lc.includes('cost')||lc.includes('state'))){sec='hstate';return;}
+    if(lc.includes('purchase order')||lc.includes('pos by')){sec='pos';return;}
+    if(lc.includes('vehicle maintenance')){sec='veh';return;}
+    if(lc.includes('office')){sec='general';return;}
+    if(lc==='item'||lc==='state'||lc==='type of hours'||lc==='state/contractor'||lc==='state/category'||lc==='vehicle #')return;
+    if(lc==='total'||lc==='')return;
+    if(sec==='general'){
+      if(lc.includes('bills'))off.bills=num(r[2]!==undefined&&r[2]!==''?r[2]:r[1]);
+      else if(lc.includes('checks'))off.checks=num(r[2]!==undefined&&r[2]!==''?r[2]:r[1]);
+      else if(lc.includes('it issues'))off.it=num(r[2]!==undefined&&r[2]!==''?r[2]:r[1]);
+      else if(lc.includes('payment'))off.payments=num(r[2]!==undefined&&r[2]!==''?r[2]:r[1]);
+    }else if(sec==='jobs'&&c0&&!lc.includes('state')){off.jobs[c0]=num(r[1]);}
+    else if(sec==='inv'&&c0&&!lc.includes('state')){off.invoices[c0]=num(r[1]);}
+    else if(sec==='hrs'){
+      if(lc.includes('regular'))off.regHrs=num(r[1]);
+      else if(lc.includes('overtime'))off.otHrs=num(r[1]);
+      else if(lc.includes('contractor'))off.conHrs=num(r[1]);
+    }else if(sec==='hstate'&&c0&&!lc.includes('state/con')&&!lc.includes('total')){
+      off.hoursByState.push({name:c0,reg:num(r[1]),ot:num(r[2]),cost:num(r[3])});
+    }else if(sec==='pos'&&c0){off.pos[c0]=num(r[1]);}
+    else if(sec==='veh'&&(c0||r[1]||r[2])){off.vehicles.push({vehicle:c0,date:r[1],desc:r[2]});}
+  });
+
+  // MARKETING
+  const mkt={posts:{},views:{},notes:[]};
+  let msec='posts';
+  rows('marketing').forEach(r=>{
+    const c0=String(r[0]||'').trim();
+    const lc=c0.toLowerCase();
+    if(lc.includes('marketing section')){msec='posts';return;}
+    if(lc.includes('platform views')||lc.includes('views for')){msec='views';return;}
+    if(lc.includes('marketing notes')||lc.includes('campaign')){msec='notes';return;}
+    if(lc==='platform / post type'||lc==='platform'||lc==='note / update'||lc==='total'||lc==='')return;
+    if(msec==='posts'&&c0)mkt.posts[c0]=num(r[1]);
+    else if(msec==='views'&&c0)mkt.views[c0]=num(r[1]);
+    else if(msec==='notes'&&c0)mkt.notes.push(c0);
+  });
+
+  // HR
+  const hr={etEvents:[],positions:[],sunEvents:[],notes:[]};
+  let hrsec='';
+  rows('hr').forEach(r=>{
+    const c0=String(r[0]||'').trim();
+    const lc=c0.toLowerCase();
+    if(lc.includes('hr section')){hrsec='';return;}
+    if(lc.includes('e&t electric') && lc.includes('head')){hrsec='etev';return;}
+    if(lc.includes('open position')){hrsec='pos';return;}
+    if(lc.includes('sunshine')&&lc.includes('hr')){hrsec='sunev';return;}
+    if(lc.includes('general hr notes')){hrsec='notes';return;}
+    if(lc==='event type'||lc==='position title'||lc==='note / update'||lc==='')return;
+    if(hrsec==='etev'&&c0)hr.etEvents.push({type:c0,employee:String(r[1]||''),count:num(r[2]),notes:String(r[3]||'')});
+    else if(hrsec==='pos'&&c0)hr.positions.push({title:c0,state:String(r[1]||''),applicants:r[2],status:String(r[3]||'')});
+    else if(hrsec==='sunev'&&c0)hr.sunEvents.push({type:c0,employee:String(r[1]||''),count:num(r[2]),notes:String(r[3]||'')});
+    else if(hrsec==='notes'&&c0)hr.notes.push(c0);
+  });
+
+  // SUNSHINE
+  const sun={income:0,cars:0,members:0,period:'',profitCenters:[],notes:[]};
+  let sunsec='summary';
+  rows('sunshine').forEach(r=>{
+    const c0=String(r[0]||'').trim();
+    const lc=c0.toLowerCase();
+    if(lc.includes('sunshine carwash section')){sunsec='summary';return;}
+    if(lc.includes('profit centers')&&!lc.includes('net')){sunsec='pc';return;}
+    if(lc.includes('sunshine notes')){sunsec='notes';return;}
+    if(lc==='metric'||lc==='profit center'||lc==='')return;
+    if(sunsec==='summary'){
+      if(lc.includes('total income'))sun.income=num(r[1]);
+      else if(lc.includes('total cars'))sun.cars=num(r[1]);
+      else if(lc.includes('active member'))sun.members=num(r[1]);
+      else if(lc.includes('period'))sun.period=r[1];
+    }else if(sunsec==='pc'&&c0&&!lc.includes('net total')){
+      const raw=String(r[2]||'0');
+      const amt=raw.includes('(')?-Math.abs(num(r[2])):num(r[2]);
+      sun.profitCenters.push({name:c0,qty:num(r[1]),amount:amt});
+    }else if(sunsec==='notes'&&c0)sun.notes.push(c0);
+  });
+
+  return{meta,office:off,marketing:mkt,hr,sunshine:sun};
+}
+
+function renderDashboard(data){
+  document.getElementById('empty-state').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  document.getElementById('control-bar').style.display='flex';
+  document.getElementById('clear-btn').style.display='inline-flex';
+  const{meta,office:off,marketing:mkt,hr,sunshine:sun}=data;
+  const fmt=v=>{if(!v)return '&mdash;';if(v instanceof Date)return v.toLocaleDateString('en-US');const d=new Date(v);if(!isNaN(d))return d.toLocaleDateString('en-US');return String(v);};
+  const fmtN=(n,dec=0)=>n.toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  document.getElementById('topbar-meta').textContent=(meta.weekStart||meta.weekEnd)?
+    'Week: '+[meta.weekStart,meta.weekEnd].filter(Boolean).map(v=>{const d=new Date(v);return isNaN(d)?v:d.toLocaleDateString('en-US');}).join(' – '):
+    'File loaded';
+
+  const totalHrs=off.regHrs+off.otHrs+off.conHrs;
+  document.getElementById('nav-office-val').textContent=fmtN(totalHrs,1)+' hrs';
+  const totalViews=Object.values(mkt.views).reduce((a,b)=>a+b,0);
+  document.getElementById('nav-marketing-val').textContent=fmtN(totalViews);
+  document.getElementById('nav-hr-val').textContent=hr.positions.filter(p=>p.title).length;
+  document.getElementById('nav-sunshine-val').textContent='$'+fmtN(sun.income,2);
+
+  // OFFICE KPIs
+  document.getElementById('o-bills').textContent=fmtN(off.bills);
+  document.getElementById('o-checks').textContent=fmtN(off.checks);
+  document.getElementById('o-it').textContent=fmtN(off.it);
+  document.getElementById('o-payments').textContent='$'+fmtN(off.payments,2);
+  document.getElementById('o-total-hrs').textContent=fmtN(totalHrs,1);
+
+  const hMax=Math.max(off.regHrs,off.otHrs,off.conHrs,1);
+  document.getElementById('hours-bars').innerHTML=[
+    ['Regular Hours',off.regHrs,'#3b82f6'],
+    ['Overtime Hours',off.otHrs,'#f59e0b'],
+    ['Contractor Hours',off.conHrs,'#8b5cf6']
+  ].map(([l,v,c])=>`<div class="bar-wrap"><div class="bar-label"><span>${l}</span><span>${fmtN(v,1)}</span></div><div class="bar-track"><div class="bar-fill" style="width:${(v/hMax*100).toFixed(1)}%;background:${c}"></div></div></div>`).join('');
+
+  makeBar('chart-jobs',Object.keys(off.jobs),Object.values(off.jobs),'#3b82f6');
+  makeBar('chart-inv',Object.keys(off.invoices),Object.values(off.invoices),'#06b6d4');
+  makeBar('chart-pos',Object.keys(off.pos),Object.values(off.pos),'#8b5cf6');
+
+  document.querySelector('#tbl-hours-state tbody').innerHTML=off.hoursByState.map(h=>`<tr><td>${h.name}</td><td class="num">${fmtN(h.reg,1)}</td><td class="num">${h.ot>0?fmtN(h.ot,1):'<span class="zero">&mdash;</span>'}</td><td class="num">$${fmtN(h.cost,2)}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--muted);text-align:center">No data</td></tr>';
+
+  const av=off.vehicles.filter(v=>v.vehicle||v.desc);
+  document.querySelector('#tbl-vehicles tbody').innerHTML=av.length?av.map(v=>`<tr><td>${v.vehicle||'&mdash;'}</td><td>${fmt(v.date)}</td><td>${v.desc||'&mdash;'}</td></tr>`).join(''):'<tr><td colspan="3" style="color:var(--muted);text-align:center">No maintenance this week</td></tr>';
+
+  // MARKETING
+  const tp=Object.values(mkt.posts).reduce((a,b)=>a+b,0);
+  document.getElementById('m-posts').textContent=fmtN(tp);
+  document.getElementById('m-views').textContent=fmtN(totalViews);
+  document.getElementById('m-ig').textContent=fmtN(mkt.views['Instagram']||0);
+  document.getElementById('m-fb').textContent=fmtN(mkt.views['Facebook']||0);
+  document.getElementById('m-tt').textContent=fmtN(mkt.views['TikTok']||0);
+  makeBar('chart-posts',Object.keys(mkt.posts),Object.values(mkt.posts),'#22c55e');
+  makeBar('chart-views',Object.keys(mkt.views),Object.values(mkt.views),'#16a34a');
+  document.querySelector('#tbl-posts tbody').innerHTML=Object.entries(mkt.posts).map(([k,v])=>`<tr><td>${k}</td><td class="num">${v}</td></tr>`).join('')||'<tr><td colspan="2" style="color:var(--muted);text-align:center">No data</td></tr>';
+  const mn=mkt.notes.filter(Boolean);
+  const mnc=document.getElementById('mkt-notes-card');
+  if(mn.length){mnc.style.display='block';document.getElementById('mkt-notes-list').innerHTML=mn.map(n=>`<li>${n}</li>`).join('');}else{mnc.style.display='none';}
+
+  // HR
+  const etH=hr.etEvents.find(e=>e.type.toLowerCase().includes('new hire'));
+  const etT=hr.etEvents.find(e=>e.type.toLowerCase().includes('terminat')||e.type.toLowerCase().includes('fired'));
+  const etR=hr.etEvents.find(e=>e.type.toLowerCase().includes('resign'));
+  const snH=hr.sunEvents.find(e=>e.type.toLowerCase().includes('new hire'));
+  document.getElementById('hr-et-hire').textContent=etH?etH.count:0;
+  document.getElementById('hr-et-term').textContent=etT?etT.count:0;
+  document.getElementById('hr-et-res').textContent=etR?etR.count:0;
+  document.getElementById('hr-open').textContent=hr.positions.filter(p=>p.title).length;
+  document.getElementById('hr-sun-hire').textContent=snH?snH.count:0;
+
+  document.querySelector('#tbl-et-events tbody').innerHTML=hr.etEvents.map(e=>`<tr><td>${e.type}</td><td>${e.employee||'&mdash;'}</td><td class="num"><span class="badge ${e.count>0?(e.type.toLowerCase().includes('hire')?'badge-green':'badge-red'):'badge-muted'}">${e.count}</span></td><td>${e.notes||'&mdash;'}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--muted);text-align:center">No data</td></tr>';
+  document.querySelector('#tbl-positions tbody').innerHTML=hr.positions.filter(p=>p.title).map(p=>`<tr><td>${p.title}</td><td>${p.state||'&mdash;'}</td><td class="num"><span class="badge badge-blue">${p.applicants||0}</span></td><td>${p.status||'&mdash;'}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--muted);text-align:center">No open positions</td></tr>';
+  document.querySelector('#tbl-sun-events tbody').innerHTML=hr.sunEvents.map(e=>`<tr><td>${e.type}</td><td>${e.employee||'&mdash;'}</td><td class="num"><span class="badge ${e.count>0?(e.type.toLowerCase().includes('hire')?'badge-green':'badge-red'):'badge-muted'}">${e.count}</span></td><td>${e.notes||'&mdash;'}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--muted);text-align:center">No data</td></tr>';
+  const hn=hr.notes.filter(Boolean);
+  const hnc=document.getElementById('hr-notes-card');
+  if(hn.length){hnc.style.display='block';document.getElementById('hr-notes-list').innerHTML=hn.map(n=>`<li>${n}</li>`).join('');}else{hnc.style.display='none';}
+
+  // SUNSHINE
+  document.getElementById('s-income').textContent='$'+fmtN(sun.income,2);
+  document.getElementById('s-cars').textContent=fmtN(sun.cars);
+  document.getElementById('s-members').textContent=fmtN(sun.members);
+  document.getElementById('s-avg').textContent='$'+fmtN(sun.cars>0?sun.income/sun.cars:0,2);
+  const pcPos=sun.profitCenters.filter(p=>p.amount>0);
+  makeDoughnut('chart-sunshine',pcPos.map(p=>p.name),pcPos.map(p=>p.amount));
+  const tot=sun.profitCenters.reduce((a,b)=>a+b.amount,0);
+  document.querySelector('#tbl-sunshine tbody').innerHTML=sun.profitCenters.map(p=>`<tr><td>${p.name}</td><td class="num">${fmtN(p.qty)}</td><td class="num" style="color:${p.amount<0?'var(--negative)':'var(--text)'}">$${fmtN(Math.abs(p.amount),2)}${p.amount<0?' (disc)':''}</td></tr>`).join('')+'<tr class="total-row"><td>NET TOTAL</td><td class="num">${fmtN(sun.cars)}</td><td class="num">$'+fmtN(tot,2)+'</td></tr>';
+  document.querySelector('#tbl-sunshine tbody').innerHTML=sun.profitCenters.map(p=>`<tr><td>${p.name}</td><td class="num">${fmtN(p.qty)}</td><td class="num" style="color:${p.amount<0?'var(--negative)':'var(--text)'}">$${fmtN(Math.abs(p.amount),2)}${p.amount<0?' (disc)':''}</td></tr>`).join('')+`<tr class="total-row"><td>NET TOTAL</td><td class="num">${fmtN(sun.cars)}</td><td class="num">$${fmtN(tot,2)}</td></tr>`;
+  const snn=sun.notes.filter(Boolean);
+  const snc=document.getElementById('sun-notes-card');
+  if(snn.length){snc.style.display='block';document.getElementById('sun-notes-list').innerHTML=snn.map(n=>`<li>${n}</li>`).join('');}else{snc.style.display='none';}
+}
+
+function showSection(s){
+  ['office','marketing','hr','sunshine'].forEach(x=>{
+    document.getElementById('sec-'+x).classList.toggle('visible',x===s);
+    document.getElementById('nav-'+x).classList.toggle('active',x===s);
+  });
+}
+
+function rebuildTimeline(){
+  const keys=Object.keys(weeksData).sort().reverse();
+  document.getElementById('week-select').innerHTML=keys.map(k=>`<option value="${k}" ${k===currentWeekKey?'selected':''}>${k}</option>`).join('');
+  const b=document.getElementById('file-count-badge');
+  b.style.display='inline-block';
+  b.textContent=keys.length+' week'+(keys.length!==1?'s':'')+' loaded';
+  updateWeekPos();
+}
+
+function loadWeek(key){currentWeekKey=key;renderDashboard(weeksData[key]);updateWeekPos();}
+function navigateWeek(dir){const keys=Object.keys(weeksData).sort();const i=keys.indexOf(currentWeekKey)+dir;if(i>=0&&i<keys.length){loadWeek(keys[i]);document.getElementById('week-select').value=currentWeekKey;}}
+function updateWeekPos(){const keys=Object.keys(weeksData).sort();document.getElementById('week-position').textContent=(keys.indexOf(currentWeekKey)+1)+' of '+keys.length;}
+function clearHistory(){if(!confirm('Clear all loaded weeks from history?'))return;weeksData={};localStorage.removeItem(STORAGE_KEY);currentWeekKey=null;document.getElementById('dashboard').style.display='none';document.getElementById('empty-state').style.display='block';document.getElementById('control-bar').style.display='none';document.getElementById('clear-btn').style.display='none';document.getElementById('file-count-badge').style.display='none';document.getElementById('topbar-meta').textContent='No file loaded';}
+
+const COLORS=['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#ec4899','#84cc16','#6366f1'];
+function makeBar(id,labels,data,color){if(chartInstances[id])chartInstances[id].destroy();const ctx=document.getElementById(id);if(!ctx)return;chartInstances[id]=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data,backgroundColor:color+'cc',borderColor:color,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b949e',font:{size:11}},grid:{color:'#30363d'}},y:{ticks:{color:'#8b949e',font:{size:11}},grid:{color:'#30363d'},beginAtZero:true}}}});}
+function makeDoughnut(id,labels,data){if(chartInstances[id])chartInstances[id].destroy();const ctx=document.getElementById(id);if(!ctx)return;chartInstances[id]=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:COLORS.slice(0,labels.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#e6edf3',font:{size:11},boxWidth:12}}}}});}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+</script>
+</body>
+</html>
