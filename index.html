@@ -259,9 +259,11 @@ function readExcelFile(file){
 }
 
 function deriveKey(meta,filename){
+  // Filename first: matches KPI_2026-05-22 and KPI_2026_05_22
+  const m=filename.match(/(\d{4})[_-](\d{2})[_-](\d{2})/);
+  if(m)return m[1]+'-'+m[2]+'-'+m[3];
+  // Fall back to meta weekEnd
   if(meta.weekEnd){const d=new Date(meta.weekEnd);if(!isNaN(d))return d.toISOString().slice(0,10);}
-  const m=filename.match(/(\d{4}-\d{2}-\d{2})/);
-  if(m)return m[1];
   return new Date().toISOString().slice(0,10);
 }
 
