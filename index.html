@@ -84,7 +84,7 @@ select.week-select:focus{outline:none;border-color:var(--accent)}
 <body>
 <div class="topbar">
   <div class="topbar-logo">
-    <div class="logo-box">E&amp;T</div>
+    <img src="logo.png" alt="E&T Electric" style="height:52px;width:auto;object-fit:contain;">
     <div>
       <div class="topbar-title">E&amp;T Electric &mdash; Weekly KPI Dashboard</div>
       <div class="topbar-meta" id="topbar-meta">No file loaded</div>
@@ -110,7 +110,7 @@ select.week-select:focus{outline:none;border-color:var(--accent)}
 
 <div class="main" id="main-content">
   <div class="empty-state" id="empty-state">
-    <div class="empty-icon">&#128202;</div>
+    <img src="logo.png" alt="E&T Electric" style="height:120px;width:auto;object-fit:contain;margin-bottom:20px;"><div style="height:0"></div>
     <h2>No KPI data loaded</h2>
     <p>Upload your weekly Excel file (<code>KPI_Weekly_Template.xlsx</code>) to see the dashboard. You can upload multiple weeks &mdash; the dashboard stores history so you can navigate between them.</p>
     <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">&#8679; Upload First File</button>
@@ -159,7 +159,7 @@ select.week-select:focus{outline:none;border-color:var(--accent)}
         <div class="card"><div class="card-title">Purchase Orders <span>by State</span></div><div class="chart-wrap"><canvas id="chart-pos"></canvas></div></div>
       </div>
       <div class="grid-2">
-        <div class="card"><div class="card-title">Hours <span>Breakdown</span></div><div id="hours-bars"></div></div>
+        <div class="card"><div class="card-title">Hours <span>Breakdown</span></div><div id="hours-bars"></div><div class="chart-wrap" style="height:180px;margin-top:14px"><canvas id="chart-hours-pie"></canvas></div></div>
         <div class="card">
           <div class="card-title">Hours &amp; Cost <span>by State/Contractor</span></div>
           <div style="overflow-x:auto"><table class="data-table" id="tbl-hours-state"><thead><tr><th>State/Contractor</th><th class="num">Reg Hrs</th><th class="num">OT Hrs</th><th class="num">Cost</th></tr></thead><tbody></tbody></table></div>
@@ -379,9 +379,7 @@ function renderDashboard(data){
   const{meta,office:off,marketing:mkt,hr,sunshine:sun}=data;
   const fmt=v=>{if(!v)return '&mdash;';if(v instanceof Date)return v.toLocaleDateString('en-US');const d=new Date(v);if(!isNaN(d))return d.toLocaleDateString('en-US');return String(v);};
   const fmtN=(n,dec=0)=>n.toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec});
-  document.getElementById('topbar-meta').textContent=(meta.weekStart||meta.weekEnd)?
-    'Week: '+[meta.weekStart,meta.weekEnd].filter(Boolean).map(v=>{const d=new Date(v);return isNaN(d)?v:d.toLocaleDateString('en-US');}).join(' – '):
-    'File loaded';
+  document.getElementById('topbar-meta').textContent='Week: '+keyToWeekRange(currentWeekKey)+(meta.preparedBy?' | Prepared by: '+meta.preparedBy:'');
 
   const totalHrs=off.regHrs+off.otHrs+off.conHrs;
   document.getElementById('nav-office-val').textContent=fmtN(totalHrs,1)+' hrs';
@@ -403,6 +401,7 @@ function renderDashboard(data){
     ['Overtime Hours',off.otHrs,'#f59e0b'],
     ['Contractor Hours',off.conHrs,'#8b5cf6']
   ].map(([l,v,c])=>`<div class="bar-wrap"><div class="bar-label"><span>${l}</span><span>${fmtN(v,1)}</span></div><div class="bar-track"><div class="bar-fill" style="width:${(v/hMax*100).toFixed(1)}%;background:${c}"></div></div></div>`).join('');
+  makeDoughnutColors('chart-hours-pie',['Regular','Overtime','Contractor'],[off.regHrs,off.otHrs,off.conHrs],['#3b82f6','#f59e0b','#8b5cf6']);
 
   makeBar('chart-jobs',Object.keys(off.jobs),Object.values(off.jobs),'#3b82f6');
   makeBar('chart-inv',Object.keys(off.invoices),Object.values(off.invoices),'#06b6d4');
@@ -467,9 +466,17 @@ function showSection(s){
   });
 }
 
+function keyToWeekRange(key){
+  const d=new Date(key+'T12:00:00');
+  if(isNaN(d))return key;
+  const end=new Date(d);end.setDate(end.getDate()-1);
+  const start=new Date(d);start.setDate(start.getDate()-7);
+  const f=x=>{const mm=String(x.getMonth()+1).padStart(2,'0');const dd=String(x.getDate()).padStart(2,'0');return mm+'-'+dd+'-'+x.getFullYear();};
+  return f(start)+' to '+f(end);
+}
 function rebuildTimeline(){
   const keys=Object.keys(weeksData).sort().reverse();
-  document.getElementById('week-select').innerHTML=keys.map(k=>`<option value="${k}" ${k===currentWeekKey?'selected':''}>${k}</option>`).join('');
+  document.getElementById('week-select').innerHTML=keys.map(k=>`<option value="${k}" ${k===currentWeekKey?'selected':''}>${keyToWeekRange(k)}</option>`).join('');
   const b=document.getElementById('file-count-badge');
   b.style.display='inline-block';
   b.textContent=keys.length+' week'+(keys.length!==1?'s':'')+' loaded';
@@ -483,6 +490,11 @@ function clearHistory(){if(!confirm('Clear all loaded weeks from history?'))retu
 
 const COLORS=['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#ec4899','#84cc16','#6366f1'];
 function makeBar(id,labels,data,color){if(chartInstances[id])chartInstances[id].destroy();const ctx=document.getElementById(id);if(!ctx)return;chartInstances[id]=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data,backgroundColor:color+'cc',borderColor:color,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b949e',font:{size:11}},grid:{color:'#30363d'}},y:{ticks:{color:'#8b949e',font:{size:11}},grid:{color:'#30363d'},beginAtZero:true}}}});}
+function makeDoughnutColors(id,labels,data,colors){
+  if(chartInstances[id])chartInstances[id].destroy();
+  const ctx=document.getElementById(id);if(!ctx)return;
+  chartInstances[id]=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{color:'#e6edf3',font:{size:11},boxWidth:12}}}}});
+}
 function makeDoughnut(id,labels,data){if(chartInstances[id])chartInstances[id].destroy();const ctx=document.getElementById(id);if(!ctx)return;chartInstances[id]=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:COLORS.slice(0,labels.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#e6edf3',font:{size:11},boxWidth:12}}}}});}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 </script>
